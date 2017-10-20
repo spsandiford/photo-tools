@@ -230,6 +230,9 @@ sub keypress {
     } elsif ($keysym_text eq "w") {
         wow();
         set_window_title();
+    } elsif ($keysym_text eq "d") {
+        deleteit();
+        set_window_title();
     } elsif ( $e->N > 48 && $e->N < 54 ) {
         rate($e->N - 48);
         $ii++;
@@ -247,6 +250,19 @@ sub wow {
     } else {
         $current_image->{Comment} .= "[wow]";
         rate(5);
+    }
+    $current_image->{exifTool}->SetNewValue("Comment",$current_image->{Comment});
+    $current_image->{exifTool}->SetNewValue("XPComment",$current_image->{Comment});
+    $current_image->{exifTool}->WriteInfo($current_image->{filename});
+}
+
+sub deleteit {
+    print "Delete!!! $current_image->{filename}\n";
+    if ($current_image->{Comment} =~ /.*\[delete\].*/) {
+        $current_image->{Comment} =~ s/(.*)\[delete\](.*)/$1$2/;
+    } else {
+        $current_image->{Comment} .= "[delete]";
+        rate(1);
     }
     $current_image->{exifTool}->SetNewValue("Comment",$current_image->{Comment});
     $current_image->{exifTool}->SetNewValue("XPComment",$current_image->{Comment});
