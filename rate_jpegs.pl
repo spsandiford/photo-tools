@@ -13,7 +13,6 @@ use Time::HiRes qw( time );
 ##########################################################
 #  Tunables
 my @exif_suffixes = ( ".jpg", ".jpeg", ".JPG", ".JPEG" );
-my $WOW_TEXT = "[wow]";
 my $MAINWINDOW_W = 1280;
 my $MAINWINDOW_H = 640;
 ##########################################################
@@ -102,6 +101,19 @@ sub max
     $n > $m ? $n : $m
 }
 
+sub set_window_title {
+    my $window_title = "(" . ($ii + 1) . "/" . scalar(@files) . ") $current_image->{filename}";
+    if (exists($current_image->{Rating})) {
+        print "Rating: $current_image->{Rating}\n";
+        $window_title .= " Rating $current_image->{Rating}";
+    }
+    if (exists($current_image->{Comment})) {
+        print "Comment: $current_image->{Comment}\n";
+        $window_title .= " $current_image->{Comment}";
+    }
+    $mw->configure( -title => $window_title );
+}
+
 sub show_image
 {
     my ($start, $end);
@@ -119,16 +131,7 @@ sub show_image
     $current_image->{Comment} = $current_image->{exifTool}->GetValue("Comment");
     $current_image->{Rating} = $current_image->{exifTool}->GetValue("Rating");
 
-    my $window_title = "(" . ($ii + 1) . "/" . scalar(@files) . ") $current_image->{filename}";
-    if (exists($current_image->{Rating})) {
-        print "Rating: $current_image->{Rating}\n";
-        $window_title .= " Rating $current_image->{Rating}";
-    }
-    if (exists($current_image->{Comment})) {
-        print "Comment: $current_image->{Comment}\n";
-        $window_title .= " $current_image->{Comment}";
-    }
-    $mw->configure( -title => $window_title );
+    set_window_title();
 
     $start = time();
     my $img1 = $mw->Photo( 'fullscale',
@@ -226,12 +229,7 @@ sub keypress {
         show_image();
     } elsif ($keysym_text eq "w") {
         wow();
-        rate(5);
-        $ii++;
-        if ($ii >= scalar(@files)) {
-            $ii = 0;
-        }
-        show_image();
+        set_window_title();
     } elsif ( $e->N > 48 && $e->N < 54 ) {
         rate($e->N - 48);
         $ii++;
@@ -244,8 +242,14 @@ sub keypress {
 
 sub wow {
     print "Wow!!! $current_image->{filename}\n";
-    $current_image->{exifTool}->SetNewValue("Comment",$WOW_TEXT);
-    $current_image->{exifTool}->SetNewValue("XPComment",$WOW_TEXT);
+    if ($current_image->{Comment} =~ /.*\[wow\].*/) {
+        $current_image->{Comment} =~ s/(.*)\[wow\](.*)/$1$2/;
+    } else {
+        $current_image->{Comment} .= "[wow]";
+        rate(5);
+    }
+    $current_image->{exifTool}->SetNewValue("Comment",$current_image->{Comment});
+    $current_image->{exifTool}->SetNewValue("XPComment",$current_image->{Comment});
     $current_image->{exifTool}->WriteInfo($current_image->{filename});
 }
 
@@ -264,7 +268,9 @@ sub rate {
     } elsif ($rating == 1) {
         $ratingpercent = 1;
     }
-    $current_image->{exifTool}->SetNewValue("Rating",$rating);
+
+    $current_image->{Rating} = $rating;
+    $current_image->{exifTool}->SetNewValue("Rating",$current_image->{Rating});
     $current_image->{exifTool}->SetNewValue("RatingPercent",$ratingpercent);
     $current_image->{exifTool}->WriteInfo($current_image->{filename});
 }
